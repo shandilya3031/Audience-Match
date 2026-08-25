@@ -1,7 +1,7 @@
 # Feature Spec — Phase 00.01: Environment Config
 
 ## Status
-`Not Started`
+`Complete`
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -114,18 +114,18 @@ None (no pre-existing files touch this feature).
 - No free-text agent-to-agent handoffs — not applicable, no agents exist yet.
 
 ## Definition of Done
-- [ ] `app/config.py` loads settings from environment variables via
+- [x] `app/config.py` loads settings from environment variables via
       `pydantic-settings`, with typed fields for AWS/Bedrock, Pinecone, PostgreSQL
       (including the read-only DSN), DynamoDB, S3, and LangSmith, plus `app_env`
-- [ ] `.env.example` is committed with a placeholder for every `Settings` field and
+- [x] `.env.example` is committed with a placeholder for every `Settings` field and
       contains zero real secrets
-- [ ] `from app.config import settings` succeeds in a fresh Python process after
+- [x] `from app.config import settings` succeeds in a fresh Python process after
       copying `.env.example` to `.env` and filling in placeholder (non-real) values
-- [ ] `Settings` also loads correctly from real environment variables with no `.env`
+- [x] `Settings` also loads correctly from real environment variables with no `.env`
       file present (verifies container/CI compatibility, where `.env` won't exist)
-- [ ] Missing a required field (e.g. no `PINECONE_API_KEY` set) raises a clear
+- [x] Missing a required field (e.g. no `PINECONE_API_KEY` set) raises a clear
       `pydantic` validation error rather than silently defaulting
-- [ ] No `CLAUDE.md` §4 or §9 rule violations (self-check) — specifically no
+- [x] No `CLAUDE.md` §4 or §9 rule violations (self-check) — specifically no
       hardcoded secret values anywhere in `app/config.py` or committed to git
 
 ## Out of Scope
