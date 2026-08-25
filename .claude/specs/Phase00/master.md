@@ -116,6 +116,7 @@ Do not edit manually._
 |---|---|---|---|
 | 01 | Environment Config | feature01-environment-config.md | Complete |
 | 02 | LLM Clients | feature02-llm-clients.md | Complete |
+| 03 | Observability Bootstrap | feature03-observability-bootstrap.md | Not Started |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
