@@ -116,14 +116,25 @@ No eval additions — non-agent-facing change.
       Forbidden for url: https://api.smith.langchain.com/runs/multipart` — proof the
       LangSmith client attempted to post a real trace and was rejected only because
       the placeholder API key is invalid, not because tracing was inert
-- [ ] ⚠️ **Requires real credentials, not yet verified:** running the script
-      against real AWS Bedrock and LangSmith credentials produces a visible trace
-      in the `audience-match-dev` LangSmith project. Per the master spec's stated
-      assumption (no cloud credentials confirmed available), this item is
-      completed by the user running `python -m scripts.verify_langsmith_trace`
-      themselves once real credentials are in `.env`, and confirming the trace
-      appears in the LangSmith UI. **Status stays `In Progress` until this is
-      confirmed** — do not mark `Complete` or ship this feature until then.
+- [x] **LangSmith side confirmed with real credentials (interim evidence, not the
+      DoD item itself):** with real `LANGSMITH_API_KEY`/`LANGSMITH_PROJECT` in
+      `.env`, a standalone throwaway script (not committed — lives outside the repo,
+      uses OpenAI's `gpt-4o-mini` via `@traceable`/`wrap_openai` since Bedrock
+      credentials weren't available, per the langsmith-trace skill's
+      "trace_other_frameworks" pattern) produced a trace named `test_call` visible
+      in the LangSmith UI under project `audience-match-dev`, with correct
+      `LANGSMITH_PROJECT`/`LANGSMITH_TRACING` metadata and output "Observability
+      check." — user-confirmed via screenshot. This proves the LangSmith ingestion
+      path (API key, project routing, tracing activation) is genuinely correct end
+      to end. It does **not** exercise Bedrock, so it does not satisfy the item
+      below.
+- [ ] ⚠️ **Requires real Bedrock credentials, not yet verified:** running
+      `python -m scripts.verify_langsmith_trace` (the actual committed script,
+      which uses `haiku` from `app.llm.bedrock_clients`) against real AWS Bedrock
+      credentials produces a visible trace in the `audience-match-dev` LangSmith
+      project. This is the item the master spec's Definition of Done actually
+      refers to. **Status stays `In Progress` until this is confirmed** — do not
+      mark `Complete` or ship this feature until then.
 - [x] No `CLAUDE.md` §4 or §9 rule violations (self-check)
 
 ## Out of Scope
