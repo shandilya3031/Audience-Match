@@ -28,8 +28,8 @@ zero extra work later.
   `app/llm/model_router.py` with an (initially empty) `ROUTING_TABLE` that later
   phases populate by task name (CLAUDE.md §4 rules 1–2)
 - **4.3 Observability Bootstrap** — LangSmith project wiring
-  (`LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT`) verified with one manual test trace
-  before any agent code exists
+  (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`) verified with one
+  manual test trace before any agent code exists
 - **4.4 Storage Bootstrap** — Pinecone index/namespace config, PostgreSQL table DDL +
   `app_readonly` read-only role, DynamoDB table definitions, S3 bucket definitions.
   Code/config definitions are in scope now; **actual cloud resource provisioning is
@@ -99,8 +99,11 @@ None. Golden datasets and `eval/run_*_eval.py` gating scripts begin with Phase 1
 structure.
 
 ## Observability Requirements
-- LangSmith project created; `LANGCHAIN_TRACING_V2=true` and
-  `LANGCHAIN_PROJECT=audience-match-dev` set via `.env` / `app/config.py`
+- LangSmith project created; `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`, and
+  `LANGSMITH_PROJECT=audience-match-dev` set via `.env` / `app/config.py` (current
+  LangSmith env var naming, per the installed `langsmith-trace` skill — `app.config`
+  also explicitly exports these to `os.environ`, since LangChain's tracer reads the
+  process environment directly rather than any Settings object)
 - Verified with one manual test trace (a single `sonnet.invoke(...)` or
   `haiku.invoke(...)` call) showing up in the LangSmith project — this is what proves
   wiring is correct before any agent code depends on it

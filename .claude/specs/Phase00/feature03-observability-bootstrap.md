@@ -11,16 +11,29 @@ Phase 00 — see `.claude/specs/Phase00/master.md`
 ## Overview
 Wires LangSmith tracing before any agent code exists, per blueprint §4.3 and
 blueprint §1 principle 5 ("observability is a day-1 dependency, not a day-90
-feature"). The env-var plumbing (`LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`,
-`LANGCHAIN_PROJECT`) already exists in `app/config.py` from feature `00-01`; this
+feature"). The env-var plumbing (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`,
+`LANGSMITH_PROJECT` — renamed from the initial `LANGCHAIN_*` names to match current
+LangSmith conventions, per the installed `langsmith-trace` skill; see the "Env var
+correction" note below) already exists in `app/config.py` from feature `00-01`; this
 feature adds the one-off verification call that proves the wiring actually works —
 a single `haiku.invoke(...)` call that must show up as a trace in the
 `audience-match-dev` LangSmith project. This is what the master spec's Definition of
 Done item "a manual LangSmith trace appears for a test LLM call" refers to.
 
+**Env var correction (post-installation of the `langsmith-trace` skill):** the
+skill's guidance for LangChain/LangGraph apps is `LANGSMITH_TRACING` /
+`LANGSMITH_API_KEY` / `LANGSMITH_PROJECT`, not the legacy `LANGCHAIN_TRACING_V2` /
+`LANGCHAIN_API_KEY` / `LANGCHAIN_PROJECT` names originally used. `app/config.py` was
+updated accordingly (fields renamed, plus a new optional `langsmith_workspace_id`).
+This also surfaced a real gap: `pydantic-settings` reading `.env` into the `Settings`
+object does **not** populate `os.environ`, but LangChain's tracer reads
+`os.environ` directly — so `app/config.py` now explicitly does
+`os.environ.setdefault(...)` for each LangSmith var after constructing `settings`,
+using `setdefault` so a real env var (e.g. set by a container) is never overridden.
+
 ## Depends On
-- `00-01-environment-config` — supplies `settings.langchain_tracing_v2`,
-  `settings.langchain_api_key`, `settings.langchain_project`
+- `00-01-environment-config` — supplies `settings.langsmith_tracing`,
+  `settings.langsmith_api_key`, `settings.langsmith_project`
 - `00-02-llm-clients` — supplies `haiku` (the client this feature's verification
   call uses)
 
@@ -32,7 +45,7 @@ entry point:
 # scripts/verify_langsmith_trace.py
 def main() -> None:
     """Invoke haiku once and print the result, to be manually confirmed as a
-    trace in the LangSmith project named by settings.langchain_project."""
+    trace in the LangSmith project named by settings.langsmith_project."""
 ```
 
 ## LLM Call Sites
@@ -67,8 +80,12 @@ No eval additions — non-agent-facing change.
   "one-off and scheduled jobs" — this qualifies).
 
 ## Files to Modify
-None. LangSmith env vars are already defined in `app/config.py` and `.env.example`
-from feature `00-01`.
+- `app/config.py` — renamed `langchain_tracing_v2`/`langchain_api_key`/
+  `langchain_project` to `langsmith_tracing`/`langsmith_api_key`/
+  `langsmith_project`, added optional `langsmith_workspace_id`, and added explicit
+  `os.environ.setdefault(...)` calls so LangChain's tracer (which reads the process
+  environment, not the Settings object) actually sees these values
+- `.env.example` and local `.env` — updated to the renamed `LANGSMITH_*` var names
 
 ## New Dependencies
 - `langsmith` — explicit dependency on the tracing SDK, rather than relying on it
@@ -87,14 +104,18 @@ from feature `00-01`.
 ## Definition of Done
 - [x] `scripts/verify_langsmith_trace.py` exists, imports `haiku` from
       `app.llm.bedrock_clients`, and makes exactly one `.invoke()` call
-- [x] `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, and `LANGCHAIN_PROJECT` are read
-      via `app.config.settings` inside the script's execution path (i.e. by virtue
-      of importing `app.llm.bedrock_clients`, which imports `app.config`) — no
-      hardcoded values
+- [x] `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT` are read via
+      `app.config.settings` and explicitly exported to `os.environ` (see "Env var
+      correction" in Overview) — no hardcoded values
 - [x] Running the script with placeholder `.env` values fails with a clean
       `botocore.exceptions.NoCredentialsError`, not an import or config error —
-      confirms wiring is correct up to the credentials boundary (verified in a
-      clean venv: `python -m scripts.verify_langsmith_trace`)
+      confirms Bedrock wiring is correct up to the credentials boundary (verified
+      in a clean venv: `python -m scripts.verify_langsmith_trace`)
+- [x] LangSmith tracing is confirmed *actively firing*, not just configured: the
+      same run also produced `langsmith.utils.LangSmithError: ... 403 Client Error:
+      Forbidden for url: https://api.smith.langchain.com/runs/multipart` — proof the
+      LangSmith client attempted to post a real trace and was rejected only because
+      the placeholder API key is invalid, not because tracing was inert
 - [ ] ⚠️ **Requires real credentials, not yet verified:** running the script
       against real AWS Bedrock and LangSmith credentials produces a visible trace
       in the `audience-match-dev` LangSmith project. Per the master spec's stated
