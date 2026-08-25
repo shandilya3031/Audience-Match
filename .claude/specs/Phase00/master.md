@@ -115,6 +115,7 @@ Do not edit manually._
 | # | Feature | Spec file | Status |
 |---|---|---|---|
 | 01 | Environment Config | feature01-environment-config.md | Complete |
+| 02 | LLM Clients | feature02-llm-clients.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all

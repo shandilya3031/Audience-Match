@@ -1,2 +1,6 @@
 pydantic-settings
 python-dotenv
+langchain-core
+langchain-aws
+boto3
+pytest
