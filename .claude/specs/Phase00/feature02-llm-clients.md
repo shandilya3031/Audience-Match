@@ -1,7 +1,7 @@
 # Feature Spec — Phase 00.02: LLM Clients
 
 ## Status
-`Not Started`
+`Complete`
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -96,17 +96,17 @@ No eval additions — non-agent-facing change.
   `app.config`" should hold uniformly).
 
 ## Definition of Done
-- [ ] `from app.llm.bedrock_clients import sonnet, haiku, robust_sonnet` succeeds
+- [x] `from app.llm.bedrock_clients import sonnet, haiku, robust_sonnet` succeeds
       with valid dummy `.env` values (no real AWS call required at import time)
-- [ ] `robust_sonnet` is `sonnet.with_fallbacks([haiku, llama_fallback])` (fallback
+- [x] `robust_sonnet` is `sonnet.with_fallbacks([haiku, llama_fallback])` (fallback
       chain: Sonnet → Haiku → Llama, matching blueprint §4.2)
-- [ ] No hardcoded model ID or region string in `bedrock_clients.py` — all sourced
+- [x] No hardcoded model ID or region string in `bedrock_clients.py` — all sourced
       from `app.config.settings`
-- [ ] `app/llm/model_router.py` defines `ROUTING_TABLE = {}` and
+- [x] `app/llm/model_router.py` defines `ROUTING_TABLE = {}` and
       `get_model_for_task()` raises a clear error for an unregistered task name
-- [ ] `tests/unit/test_llm_clients.py` passes: no `ChatBedrock(` outside
+- [x] `tests/unit/test_llm_clients.py` passes: no `ChatBedrock(` outside
       `app/llm/bedrock_clients.py`, and `get_model_for_task()` raises correctly
-- [ ] No `CLAUDE.md` §4 or §9 rule violations (self-check) — specifically rules 1
+- [x] No `CLAUDE.md` §4 or §9 rule violations (self-check) — specifically rules 1
       and 2
 
 ## Out of Scope
