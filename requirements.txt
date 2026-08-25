@@ -3,4 +3,5 @@ python-dotenv
 langchain-core
 langchain-aws
 boto3
+langsmith
 pytest

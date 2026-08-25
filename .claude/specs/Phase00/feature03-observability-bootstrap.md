@@ -1,7 +1,9 @@
 # Feature Spec — Phase 00.03: Observability Bootstrap
 
 ## Status
-`Not Started`
+`In Progress` — code complete and verified up to the credentials boundary; the
+final live-trace check needs the user to run the script with real credentials
+(see Definition of Done below).
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -83,21 +85,25 @@ from feature `00-01`.
 - No free-text agent-to-agent handoffs — not applicable, no agents exist yet.
 
 ## Definition of Done
-- [ ] `scripts/verify_langsmith_trace.py` exists, imports `haiku` from
+- [x] `scripts/verify_langsmith_trace.py` exists, imports `haiku` from
       `app.llm.bedrock_clients`, and makes exactly one `.invoke()` call
-- [ ] `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, and `LANGCHAIN_PROJECT` are read
+- [x] `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, and `LANGCHAIN_PROJECT` are read
       via `app.config.settings` inside the script's execution path (i.e. by virtue
       of importing `app.llm.bedrock_clients`, which imports `app.config`) — no
       hardcoded values
-- [ ] ⚠️ **Requires real credentials, cannot be verified by the assistant in this
-      environment:** running the script against real AWS Bedrock and LangSmith
-      credentials produces a visible trace in the `audience-match-dev` LangSmith
-      project. Per the master spec's stated assumption (no cloud credentials
-      confirmed available), this item is completed by the user running the script
-      themselves once credentials are in `.env`, and confirming the trace appears —
-      it is logged here as a deferred follow-up rather than silently dropped, per
-      the master spec's Definition of Done gate
-- [ ] No `CLAUDE.md` §4 or §9 rule violations (self-check)
+- [x] Running the script with placeholder `.env` values fails with a clean
+      `botocore.exceptions.NoCredentialsError`, not an import or config error —
+      confirms wiring is correct up to the credentials boundary (verified in a
+      clean venv: `python -m scripts.verify_langsmith_trace`)
+- [ ] ⚠️ **Requires real credentials, not yet verified:** running the script
+      against real AWS Bedrock and LangSmith credentials produces a visible trace
+      in the `audience-match-dev` LangSmith project. Per the master spec's stated
+      assumption (no cloud credentials confirmed available), this item is
+      completed by the user running `python -m scripts.verify_langsmith_trace`
+      themselves once real credentials are in `.env`, and confirming the trace
+      appears in the LangSmith UI. **Status stays `In Progress` until this is
+      confirmed** — do not mark `Complete` or ship this feature until then.
+- [x] No `CLAUDE.md` §4 or §9 rule violations (self-check)
 
 ## Out of Scope
 - Structured `agent` / `prompt_version` LangSmith tag conventions — that's Phase 9
