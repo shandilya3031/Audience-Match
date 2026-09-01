@@ -1,7 +1,11 @@
 # Feature Spec — Phase 00.01: Environment Config
 
 ## Status
-`Complete`
+`Complete` — note: the LangSmith fields documented below were renamed in feature
+`00-03` (`langchain_tracing_v2`/`langchain_api_key`/`langchain_project` →
+`langsmith_tracing`/`langsmith_api_key`/`langsmith_project`, plus a new optional
+`langsmith_workspace_id`) to match current LangSmith conventions surfaced by the
+installed `langsmith-trace` skill. This section reflects the corrected names.
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -53,9 +57,10 @@ class Settings(BaseSettings):
     s3_raw_customer_data_bucket: str
 
     # LangSmith
-    langchain_tracing_v2: bool = True
-    langchain_api_key: str
-    langchain_project: str = "audience-match-dev"
+    langsmith_tracing: bool = True
+    langsmith_api_key: str
+    langsmith_project: str = "audience-match-dev"
+    langsmith_workspace_id: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

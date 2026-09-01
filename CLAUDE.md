@@ -15,7 +15,7 @@ Audience Match is a multi-agent marketing intelligence platform: one **Superviso
 - **Aggregator** — converts natural language to SQL against PostgreSQL marketing data
 - **Campaign Briefing** — synthesizes all other agents' conversation history into a campaign roadmap
 
-Stack: Python, LangChain + LangGraph, FastAPI, Pinecone, PostgreSQL, DynamoDB, S3, Amazon Bedrock (Claude Sonnet/Haiku + Llama fallback), Docker, AWS ECS Fargate, GitHub Actions, LangSmith, RAGAS.
+Stack: Python, LangChain + LangGraph, FastAPI, Chroma (local vector store), PostgreSQL, DynamoDB, S3, Groq (hosted free-tier inference — open-weight models), Docker, AWS ECS Fargate, GitHub Actions, LangSmith, RAGAS. See the blueprint's "Architecture Amendment — Open-Source/Zero-Cost Pivot" for why Bedrock/Pinecone were replaced.
 
 ---
 
@@ -39,7 +39,7 @@ app/
   guardrails/             Input/output validation, SQL guard, PII
   caching/                Exact/semantic/embedding cache layers
   observability/          LangSmith setup, cost tracking
-  llm/                    bedrock_clients.py, model_router.py — the ONLY place ChatBedrock is instantiated
+  llm/                    llm_clients.py, model_router.py — the ONLY place ChatGroq is instantiated
 eval/
   golden_datasets/        One file per agent, JSONL, shared schema (see §7)
   run_*_eval.py           CI-gating scripts
@@ -58,7 +58,7 @@ scripts/                 One-off and scheduled jobs (schema extraction, cache wa
 
 These are enforced, not suggested. If a change would violate one, stop and flag it rather than proceeding.
 
-1. **No raw `ChatBedrock(...)` instantiation outside `app/llm/bedrock_clients.py`.** Every other file imports `sonnet`, `haiku`, or `robust_sonnet` from there. This is what makes model swaps and fallback policy a one-file change.
+1. **No raw `ChatGroq(...)` instantiation outside `app/llm/llm_clients.py`.** Every other file imports `sonnet`, `haiku`, or `robust_sonnet` from there. This is what makes model swaps and fallback policy a one-file change.
 
 2. **No LLM call site without a declared model tier.** Add new call sites to `ROUTING_TABLE` in `app/llm/model_router.py` by task name (e.g. `"filter_extraction": haiku`). Don't inline model selection in agent code.
 
