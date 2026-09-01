@@ -1,8 +1,7 @@
 # Feature Spec — Phase 00.06: LLM Provider Pivot (Bedrock → Groq)
 
 ## Status
-`In Progress` — code complete; blocked on the user obtaining a real Groq API key
-and running the final verification (see Definition of Done below).
+`Complete`
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -141,14 +140,15 @@ No eval additions — non-agent-facing change.
 - [x] `scripts/verify_langsmith_trace.py` imports from `app.llm.llm_clients`
 - [x] `CLAUDE.md` and the blueprint updated (no stale Bedrock/Pinecone
       references in Phase 0's active scope)
-- [ ] With a placeholder `GROQ_API_KEY`, `python -m scripts.verify_langsmith_trace`
-      fails cleanly on a Groq auth error, not an import/config error
-- [ ] ⚠️ **Requires a real Groq API key, not yet verified:** with a real
-      `GROQ_API_KEY` in `.env`, `python -m scripts.verify_langsmith_trace`
-      succeeds end-to-end and produces a visible trace in the
-      `audience-match-dev` LangSmith project. **Status stays `In Progress` until
-      this is confirmed** — this is also what finally unblocks
-      `feature03-observability-bootstrap`'s own long-blocked DoD item.
+- [x] With a placeholder `GROQ_API_KEY`, `python -m scripts.verify_langsmith_trace`
+      failed cleanly with `groq.AuthenticationError: 401 Invalid API Key`, not an
+      import/config error
+- [x] With a real `GROQ_API_KEY`, `python -m scripts.verify_langsmith_trace`
+      succeeded (printed `observability check`, the real Groq response) and
+      produced a visible trace in the `audience-match-dev` LangSmith project —
+      confirmed via `Client().list_runs(...)`: run `ChatGroq success`,
+      2026-09-01 10:49:53 UTC. This also unblocks
+      `feature03-observability-bootstrap`'s own DoD item.
 - [x] No `CLAUDE.md` §4 or §9 rule violations (self-check)
 
 ## Out of Scope

@@ -1,9 +1,7 @@
 # Feature Spec — Phase 00.03: Observability Bootstrap
 
 ## Status
-`In Progress` — code complete and verified up to the credentials boundary; the
-final live-trace check needs the user to run the script with real credentials
-(see Definition of Done below).
+`Complete`
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -131,14 +129,13 @@ No eval additions — non-agent-facing change.
       path (API key, project routing, tracing activation) is genuinely correct end
       to end. It does **not** exercise Bedrock, so it does not satisfy the item
       below.
-- [ ] ⚠️ **Requires real Groq credentials, not yet verified (superseded from
-      Bedrock — see `00-06-llm-provider-pivot`):** running
-      `python -m scripts.verify_langsmith_trace` (the actual committed script,
-      which uses `haiku` from `app.llm.llm_clients`, Groq-backed) against a real
-      `GROQ_API_KEY` produces a visible trace in the `audience-match-dev`
-      LangSmith project. This is the item the master spec's Definition of Done
-      actually refers to. **Status stays `In Progress` until this is confirmed** —
-      do not mark `Complete` or ship this feature until then.
+- [x] **Confirmed with real Groq credentials (via `00-06-llm-provider-pivot`):**
+      `python -m scripts.verify_langsmith_trace` (using `haiku` from
+      `app.llm.llm_clients`, Groq-backed) succeeded against a real `GROQ_API_KEY`
+      and produced a visible trace in the `audience-match-dev` LangSmith
+      project — confirmed via `Client().list_runs(...)`: run `ChatGroq success`,
+      2026-09-01 10:49:53 UTC. This is the item the master spec's Definition of
+      Done actually refers to.
 - [x] No `CLAUDE.md` §4 or §9 rule violations (self-check)
 
 ## Out of Scope

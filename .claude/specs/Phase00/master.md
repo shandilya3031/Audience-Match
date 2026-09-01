@@ -122,8 +122,8 @@ Do not edit manually._
 |---|---|---|---|
 | 01 | Environment Config | feature01-environment-config.md | Complete |
 | 02 | LLM Clients | feature02-llm-clients.md | Complete (provider superseded by 06) |
-| 03 | Observability Bootstrap | feature03-observability-bootstrap.md | In Progress (blocked on user's real credentials) |
-| 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | In Progress |
+| 03 | Observability Bootstrap | feature03-observability-bootstrap.md | Complete |
+| 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
@@ -133,7 +133,8 @@ storage reachable"):
 - [ ] `docker build` succeeds
 - [ ] Container runs locally
 - [ ] `/health` returns 200
-- [ ] A manual LangSmith trace appears for a test LLM call
+- [x] A manual LangSmith trace appears for a test LLM call (`ChatGroq success`,
+      `audience-match-dev`, 2026-09-01 10:49:53 UTC — feature `00-03`/`00-06`)
 - [ ] Chroma/PostgreSQL/DynamoDB are reachable from the container — Chroma needs no
       credentials (local/embedded); if PostgreSQL/DynamoDB credentials remain
       unavailable when this phase would otherwise close, this item is explicitly
