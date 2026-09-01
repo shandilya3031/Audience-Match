@@ -7,16 +7,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_env: Literal["dev", "staging", "prod"] = "dev"
 
-    # Bedrock / AWS
-    aws_region: str
-    bedrock_sonnet_model_id: str
-    bedrock_haiku_model_id: str
-    bedrock_fallback_model_id: str
+    # Groq (LLM inference)
+    groq_api_key: str
+    groq_sonnet_model_id: str
+    groq_haiku_model_id: str
+    groq_fallback_model_id: str
 
-    # Pinecone
-    pinecone_api_key: str
-    pinecone_environment: str
-    pinecone_index_name: str
+    # Chroma (local vector store) + embeddings
+    chroma_persist_directory: str = "./data/chroma"
+    embedding_model_name: str = "sentence-transformers/all-mpnet-base-v2"
 
     # PostgreSQL
     postgres_dsn: str

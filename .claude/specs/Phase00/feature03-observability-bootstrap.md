@@ -34,8 +34,10 @@ using `setdefault` so a real env var (e.g. set by a container) is never overridd
 ## Depends On
 - `00-01-environment-config` — supplies `settings.langsmith_tracing`,
   `settings.langsmith_api_key`, `settings.langsmith_project`
-- `00-02-llm-clients` — supplies `haiku` (the client this feature's verification
-  call uses)
+- `00-02-llm-clients` (superseded by `00-06-llm-provider-pivot`) — supplies
+  `haiku` (the client this feature's verification call uses), now from
+  `app/llm/llm_clients.py` (Groq-backed) rather than the original
+  `bedrock_clients.py`
 
 ## Agent I/O Contract
 No external contract — internal infra, not an agent boundary. Introduces one script
@@ -74,7 +76,8 @@ No eval additions — non-agent-facing change.
 
 ## Files to Create
 - `scripts/verify_langsmith_trace.py` — imports `haiku` from
-  `app.llm.bedrock_clients`, makes one `.invoke()` call with a fixed test prompt
+  `app.llm.llm_clients` (updated by `00-06-llm-provider-pivot`; originally
+  `app.llm.bedrock_clients`), makes one `.invoke()` call with a fixed test prompt
   (e.g. `"Say 'observability check' and nothing else."`), prints the response. This
   is the first real content in `scripts/` (blueprint §3 describes it as holding
   "one-off and scheduled jobs" — this qualifies).
@@ -93,7 +96,7 @@ No eval additions — non-agent-facing change.
 
 ## Rules for Implementation
 - **CLAUDE.md §4 rule 1**: the verification script must import `haiku` from
-  `app.llm.bedrock_clients` — it must not instantiate any `ChatBedrock` itself.
+  `app.llm.llm_clients` — it must not instantiate any `ChatGroq` itself.
 - **CLAUDE.md §4 rule 2**: does not apply here — this is the same manual-verification
   exception already established in feature `00-02`'s spec (no `ROUTING_TABLE` entry
   for a one-off check call).
@@ -128,13 +131,14 @@ No eval additions — non-agent-facing change.
       path (API key, project routing, tracing activation) is genuinely correct end
       to end. It does **not** exercise Bedrock, so it does not satisfy the item
       below.
-- [ ] ⚠️ **Requires real Bedrock credentials, not yet verified:** running
+- [ ] ⚠️ **Requires real Groq credentials, not yet verified (superseded from
+      Bedrock — see `00-06-llm-provider-pivot`):** running
       `python -m scripts.verify_langsmith_trace` (the actual committed script,
-      which uses `haiku` from `app.llm.bedrock_clients`) against real AWS Bedrock
-      credentials produces a visible trace in the `audience-match-dev` LangSmith
-      project. This is the item the master spec's Definition of Done actually
-      refers to. **Status stays `In Progress` until this is confirmed** — do not
-      mark `Complete` or ship this feature until then.
+      which uses `haiku` from `app.llm.llm_clients`, Groq-backed) against a real
+      `GROQ_API_KEY` produces a visible trace in the `audience-match-dev`
+      LangSmith project. This is the item the master spec's Definition of Done
+      actually refers to. **Status stays `In Progress` until this is confirmed** —
+      do not mark `Complete` or ship this feature until then.
 - [x] No `CLAUDE.md` §4 or §9 rule violations (self-check)
 
 ## Out of Scope

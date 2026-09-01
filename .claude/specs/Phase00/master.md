@@ -16,7 +16,7 @@ zero extra work later.
 - **Depends on (must be complete):** None — this is the root phase.
 - **Blocks (cannot start until this is done):** All of Phase 1 (Segmenter), Phase 2
   (RAG), Phase 3 (Aggregator), and every phase after them — none of them can import
-  `app.llm.bedrock_clients`, use `app.config`, or run against a deployable API until
+  `app.llm.llm_clients`, use `app.config`, or run against a deployable API until
   this phase's skeleton exists (CLAUDE.md §2, §4 rule 1).
 
 ## Scope
@@ -30,11 +30,13 @@ zero extra work later.
 - **4.3 Observability Bootstrap** — LangSmith project wiring
   (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`) verified with one
   manual test trace before any agent code exists
-- **4.4 Storage Bootstrap** — Pinecone index/namespace config, PostgreSQL table DDL +
-  `app_readonly` read-only role, DynamoDB table definitions, S3 bucket definitions.
-  Code/config definitions are in scope now; **actual cloud resource provisioning is
-  deferred** — no AWS/Pinecone/PostgreSQL/DynamoDB credentials are confirmed
-  available yet (see note under Data & Storage Touched)
+- **4.4 Storage Bootstrap** — Chroma (local vector store) collection/namespace
+  config, PostgreSQL table DDL + `app_readonly` read-only role, DynamoDB table
+  definitions, S3 bucket definitions. Code/config definitions are in scope now;
+  **actual cloud resource provisioning is deferred** — no AWS/PostgreSQL/DynamoDB
+  credentials are confirmed available yet (see note under Data & Storage Touched).
+  Chroma itself needs no cloud provisioning (local/embedded), per the blueprint's
+  "Architecture Amendment — Open-Source/Zero-Cost Pivot."
 - **4.5 Skeleton FastAPI App** — `app/main.py`, `/health` endpoint, an empty `/chat`
   endpoint that echoes input (no LLM call) — proves the deployment pipeline
   end-to-end before any AI logic exists
@@ -60,14 +62,15 @@ zero extra work later.
 None. Phase 0 creates no agents and no `AgentInput`/`AgentOutput` Pydantic contracts —
 those begin in Phase 1. It creates two new non-agent modules:
 - `app/config.py` — not agent-facing, no Pydantic I/O contract
-- `app/llm/bedrock_clients.py`, `app/llm/model_router.py` — shared infrastructure
+- `app/llm/llm_clients.py`, `app/llm/model_router.py` — shared infrastructure
   imported by all future agents, not itself an agent
 
 ## Data & Storage Touched
-- **Pinecone:** index config defined (serverless, cosine similarity, dimension to
-  match the embedding model chosen in Phase 2); namespaces planned:
-  `knowledge_base`, `cluster_profiles`, `schema_metadata`. **Not provisioned yet** —
-  config/connection code only, pending credentials.
+- **Chroma:** local collection config defined (cosine similarity, dimension to
+  match the embedding model chosen in Phase 2); namespaces/collections planned:
+  `knowledge_base`, `cluster_profiles`, `schema_metadata`. Local/embedded — no
+  cloud credentials needed; not yet provisioned since feature `00.04` hasn't been
+  implemented.
 - **PostgreSQL:** DDL defined for `cluster_profiles`, `campaigns`,
   `channel_performance`, `customer_transactions`; a dedicated read-only role
   (`app_readonly`) defined now per CLAUDE.md — not retrofitted later. **Not
@@ -118,8 +121,9 @@ Do not edit manually._
 | # | Feature | Spec file | Status |
 |---|---|---|---|
 | 01 | Environment Config | feature01-environment-config.md | Complete |
-| 02 | LLM Clients | feature02-llm-clients.md | Complete |
+| 02 | LLM Clients | feature02-llm-clients.md | Complete (provider superseded by 06) |
 | 03 | Observability Bootstrap | feature03-observability-bootstrap.md | In Progress (blocked on user's real credentials) |
+| 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | In Progress |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
@@ -130,9 +134,9 @@ storage reachable"):
 - [ ] Container runs locally
 - [ ] `/health` returns 200
 - [ ] A manual LangSmith trace appears for a test LLM call
-- [ ] Pinecone/PostgreSQL/DynamoDB are reachable from the container — **or**, if
-      credentials remain unavailable when this phase would otherwise close, this
-      item is explicitly logged here as a deferred follow-up rather than silently
-      dropped, and Phase 0 is not marked `Complete` until it is resolved one way or
-      the other
+- [ ] Chroma/PostgreSQL/DynamoDB are reachable from the container — Chroma needs no
+      credentials (local/embedded); if PostgreSQL/DynamoDB credentials remain
+      unavailable when this phase would otherwise close, this item is explicitly
+      logged here as a deferred follow-up rather than silently dropped, and Phase 0
+      is not marked `Complete` until it is resolved one way or the other
 - [ ] No unresolved items in Risk Register (blueprint §22) attributable to this phase
