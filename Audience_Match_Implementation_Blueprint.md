@@ -16,12 +16,23 @@ were replaced to eliminate every paid or approval-gated dependency:
 | Amazon Bedrock (Claude Sonnet/Haiku + Llama fallback) | **Groq** — hosted free-tier API serving open-weight models (`openai/gpt-oss-120b` / `openai/gpt-oss-20b` / `qwen/qwen3.6-27b`, current as of Sept 2026) | Bedrock model access approval never went through despite a valid AWS account and correct model IDs/inference profiles; it also costs money once approved. Groq issues a free API key instantly, no waitlist, and hosts open-weight models — same "open models via a managed API" spirit, no direct-to-Anthropic billing. |
 | Pinecone | **Chroma** — embedded, local, open-source vector DB | Pinecone is a paid/quota-gated cloud service. Chroma runs in-process, persists to local disk, and supports metadata filtering close enough to Pinecone's namespace pattern to be a clean swap. The embedding model itself (Sentence Transformers `all-mpnet-base-v2`, §4.2/§10.2 below) was already free/local — only the index *hosting* was the paid part. |
 
-**Scope of this pivot:** only LLM inference + embeddings + vector store.
-PostgreSQL, DynamoDB, S3, and AWS ECS Fargate are unchanged for now — each has
-a free/local option (e.g. DynamoDB possibly folded into PostgreSQL, S3 →
-local filesystem/MinIO, ECS Fargate → a free-tier host or local Docker) but
-that decision is deferred to Phase 0.04 (Storage Bootstrap) and the
-deployment phases (13+), where it isn't blocking anything yet.
+**Scope of this pivot (2026-09-01):** LLM inference + embeddings + vector store.
+PostgreSQL, DynamoDB, S3, and AWS ECS Fargate were unchanged at the time — each
+has a free/local option but that decision was deferred to Phase 0.04 (Storage
+Bootstrap) and the deployment phases (13+), where it wasn't blocking anything
+yet.
+
+**Storage follow-up (2026-09-01, at Phase 0.04):** with Phase 0.04 now being
+built, two more AWS-native services were replaced for the same reason —
+needing an AWS account is exactly the friction this pivot exists to remove:
+
+| Original | Replacement | Why |
+|---|---|---|
+| DynamoDB (`ChatHistory`, `SchemaMetadata`, `PromptRegistry`) | **Folded into PostgreSQL** as regular tables | One local free database instead of two AWS services; no AWS account needed for storage at all. DynamoDB's key-value access pattern maps fine onto a keyed Postgres table — `session_key` stays the lookup key, per CLAUDE.md §4 rule 7's `{user_id}_{module}_{session_id}` convention. |
+| S3 (`raw-documents/`, `raw-customer-data/`) | **Local filesystem** (`./data/raw_documents/`, `./data/raw_customer_data/`) | Simplest possible option, zero setup, matches Chroma's local-first approach. Swap for real S3 (or MinIO) only when actual cloud deployment happens. |
+
+AWS ECS Fargate remains deferred to the deployment phases (13+) — not
+blocking anything at Phase 0.
 
 **How to read the rest of this document:** the Phase 0 section (§4) below has
 been updated in place to match, since that's what's actively being built.
@@ -228,14 +239,14 @@ Every agent imports from here — never instantiates a `ChatGroq` directly. This
 - Chroma collection created locally (persisted to `CHROMA_PERSIST_DIRECTORY`), cosine similarity, dimension matching chosen embedding model
 - Namespaces/collections provisioned: `knowledge_base`, `cluster_profiles`, `schema_metadata`
 - PostgreSQL: `cluster_profiles`, `campaigns`, `channel_performance`, `customer_transactions` tables + a dedicated **read-only** DB role (`app_readonly`) created now, not retrofitted later
-- DynamoDB tables: `ChatHistory` (PK: session_key), `SchemaMetadata`, `PromptRegistry`
-- S3 buckets: `raw-documents/`, `raw-customer-data/`
+- PostgreSQL (folded in from DynamoDB, per the "Storage follow-up" amendment above): `chat_history` (keyed on `session_key`), `schema_metadata`, `prompt_registry` tables
+- Local filesystem (folded in from S3, per the amendment above): `data/raw_documents/`, `data/raw_customer_data/` directories
 
 ### 4.5 Skeleton FastAPI App
 - `/health` endpoint
 - Empty `/chat` endpoint that echoes input — proves the deployment pipeline end-to-end before any AI logic exists
 
-**Definition of Done (Phase 0):** `docker build` succeeds, container runs locally, `/health` returns 200, a manual LangSmith trace appears for a test LLM call, Chroma/PostgreSQL/DynamoDB are reachable from the container.
+**Definition of Done (Phase 0):** `docker build` succeeds, container runs locally, `/health` returns 200, a manual LangSmith trace appears for a test LLM call, Chroma/PostgreSQL are reachable from the container.
 
 ---
 
