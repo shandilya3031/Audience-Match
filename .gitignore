@@ -37,3 +37,7 @@ Thumbs.db
 
 # Docker
 *.pid
+
+# Local storage (Chroma persist dir, raw document/customer-data uploads --
+# folded in from Pinecone/S3, see the blueprint's Architecture Amendment)
+data/

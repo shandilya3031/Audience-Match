@@ -20,15 +20,15 @@ class Settings(BaseSettings):
     # PostgreSQL
     postgres_dsn: str
     postgres_readonly_dsn: str
+    # Local-dev password for the app_readonly role scripts/apply_schema.py
+    # creates -- not a real external secret, just the local Postgres role's
+    # own password (must match what's baked into postgres_readonly_dsn).
+    postgres_readonly_password: str
 
-    # DynamoDB
-    dynamodb_chat_history_table: str = "ChatHistory"
-    dynamodb_schema_metadata_table: str = "SchemaMetadata"
-    dynamodb_prompt_registry_table: str = "PromptRegistry"
-
-    # S3
-    s3_raw_documents_bucket: str
-    s3_raw_customer_data_bucket: str
+    # Local filesystem (folded in from S3 -- see blueprint's "Storage
+    # follow-up" amendment)
+    raw_documents_dir: str = "./data/raw_documents"
+    raw_customer_data_dir: str = "./data/raw_customer_data"
 
     # LangSmith
     langsmith_tracing: bool = True

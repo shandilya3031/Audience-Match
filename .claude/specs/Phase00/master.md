@@ -31,12 +31,17 @@ zero extra work later.
   (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`) verified with one
   manual test trace before any agent code exists
 - **4.4 Storage Bootstrap** — Chroma (local vector store) collection/namespace
-  config, PostgreSQL table DDL + `app_readonly` read-only role, DynamoDB table
-  definitions, S3 bucket definitions. Code/config definitions are in scope now;
-  **actual cloud resource provisioning is deferred** — no AWS/PostgreSQL/DynamoDB
-  credentials are confirmed available yet (see note under Data & Storage Touched).
-  Chroma itself needs no cloud provisioning (local/embedded), per the blueprint's
-  "Architecture Amendment — Open-Source/Zero-Cost Pivot."
+  config; PostgreSQL table DDL (`cluster_profiles`, `campaigns`,
+  `channel_performance`, `customer_transactions`, plus `chat_history`,
+  `schema_metadata`, `prompt_registry` folded in from the original DynamoDB
+  plan) + `app_readonly` read-only role; local filesystem directories
+  (`data/raw_documents/`, `data/raw_customer_data/`) folded in from the
+  original S3 plan. Per the blueprint's "Storage follow-up" amendment
+  (2026-09-01), no AWS account is needed for storage at all — Chroma is
+  local/embedded, DynamoDB was folded into PostgreSQL, and S3 was folded into
+  the local filesystem. Only a local PostgreSQL instance is required, and
+  actual provisioning (running the DDL against it) is in scope for this
+  feature, not deferred.
 - **4.5 Skeleton FastAPI App** — `app/main.py`, `/health` endpoint, an empty `/chat`
   endpoint that echoes input (no LLM call) — proves the deployment pipeline
   end-to-end before any AI logic exists
@@ -72,13 +77,16 @@ those begin in Phase 1. It creates two new non-agent modules:
   cloud credentials needed; not yet provisioned since feature `00.04` hasn't been
   implemented.
 - **PostgreSQL:** DDL defined for `cluster_profiles`, `campaigns`,
-  `channel_performance`, `customer_transactions`; a dedicated read-only role
-  (`app_readonly`) defined now per CLAUDE.md — not retrofitted later. **Not
-  provisioned yet** — pending credentials.
-- **DynamoDB:** table definitions for `ChatHistory` (PK: `session_key`),
-  `SchemaMetadata`, `PromptRegistry`. **Not provisioned yet** — pending credentials.
-- **S3:** bucket definitions for `raw-documents/`, `raw-customer-data/`. **Not
-  provisioned yet** — pending credentials.
+  `channel_performance`, `customer_transactions`, plus `chat_history` (keyed on
+  `session_key`, per CLAUDE.md §4 rule 7's `{user_id}_{module}_{session_id}`
+  convention), `schema_metadata`, `prompt_registry` (folded in from the
+  original DynamoDB plan — see blueprint's "Storage follow-up" amendment); a
+  dedicated read-only role (`app_readonly`) defined now per CLAUDE.md — not
+  retrofitted later. Provisioning against a local PostgreSQL instance is in
+  scope for feature `00.04`.
+- **DynamoDB:** no longer used — folded into PostgreSQL (see above).
+- **S3:** no longer used — folded into local filesystem directories
+  (`data/raw_documents/`, `data/raw_customer_data/`), see blueprint amendment.
 
 ## LLM Usage in This Phase
 None yet. This phase only builds the routing *infrastructure* — `ROUTING_TABLE` in
@@ -124,6 +132,7 @@ Do not edit manually._
 | 02 | LLM Clients | feature02-llm-clients.md | Complete (provider superseded by 06) |
 | 03 | Observability Bootstrap | feature03-observability-bootstrap.md | Complete |
 | 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | Complete |
+| 04 | Storage Bootstrap | feature04-storage-bootstrap.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
@@ -135,9 +144,9 @@ storage reachable"):
 - [ ] `/health` returns 200
 - [x] A manual LangSmith trace appears for a test LLM call (`ChatGroq success`,
       `audience-match-dev`, 2026-09-01 10:49:53 UTC — feature `00-03`/`00-06`)
-- [ ] Chroma/PostgreSQL/DynamoDB are reachable from the container — Chroma needs no
-      credentials (local/embedded); if PostgreSQL/DynamoDB credentials remain
-      unavailable when this phase would otherwise close, this item is explicitly
-      logged here as a deferred follow-up rather than silently dropped, and Phase 0
-      is not marked `Complete` until it is resolved one way or the other
+- [ ] Chroma/PostgreSQL are reachable from the container — both are local/no-AWS-
+      account-needed per the storage follow-up amendment (DynamoDB folded into
+      PostgreSQL, S3 folded into local filesystem); if a local PostgreSQL instance
+      isn't available when this phase would otherwise close, this item is
+      explicitly logged here as a deferred follow-up rather than silently dropped
 - [ ] No unresolved items in Risk Register (blueprint §22) attributable to this phase

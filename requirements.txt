@@ -3,4 +3,9 @@ python-dotenv
 langchain-core
 langchain-groq
 langsmith
+psycopg2-binary
+langchain-chroma
+chromadb
+langchain-huggingface
+sentence-transformers
 pytest
