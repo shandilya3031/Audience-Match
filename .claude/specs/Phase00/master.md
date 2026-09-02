@@ -133,6 +133,7 @@ Do not edit manually._
 | 03 | Observability Bootstrap | feature03-observability-bootstrap.md | Complete |
 | 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | Complete |
 | 04 | Storage Bootstrap | feature04-storage-bootstrap.md | Complete |
+| 05 | Skeleton FastAPI App | feature05-skeleton-fastapi-app.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
