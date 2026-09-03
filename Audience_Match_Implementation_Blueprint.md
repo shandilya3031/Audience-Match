@@ -2,7 +2,7 @@
 
 > A practical, phase-wise engineering plan to build the Audience Match platform as a supervisor-orchestrated multi-agent system: **Supervisor Agent** coordinating **Segmenter Agent**, **RAG (Knowledge Base) Agent**, **Aggregator Agent**, and **Campaign Briefing Agent**.
 
-**Target stack:** Python, LangChain + LangGraph, FastAPI, Chroma (local vector store), PostgreSQL, DynamoDB, S3, Groq (hosted free-tier inference), Docker, AWS ECS Fargate, GitHub Actions, LangSmith, RAGAS.
+**Target stack:** Python, LangChain + LangGraph, FastAPI, Chroma (local vector store), PostgreSQL (also holds what was originally planned as DynamoDB tables — see Storage follow-up amendment below), local filesystem (originally S3), Groq (hosted free-tier inference), Docker, AWS ECS Fargate, GitHub Actions, LangSmith, RAGAS.
 
 ---
 
@@ -40,6 +40,15 @@ Later-phase code snippets (Phase 1 onward) still show `ChatBedrock`/Pinecone
 as originally planned — read those through this amendment (swap in
 `ChatGroq`/Chroma equivalents) until each phase is actually implemented and
 its snippets get updated in place too.
+
+**Phase 0 closed 2026-09-03** (`phase/00-foundations` merged to `main` via
+PR #8) — every §4 subsection below and the repository structure in §3 now
+reflect what was actually built, not just the plan. One snippet outside
+§4 also got updated ahead of its nominal phase: §16.2's Dockerfile was
+implemented as part of Phase 0 (feature `00-07`, not Phase 12) since Phase
+0's own Definition of Done requires `docker build` to succeed locally —
+its snippet below is the real, verified Dockerfile, not the original
+illustrative one.
 
 ---
 
@@ -115,13 +124,19 @@ Five principles govern every implementation decision in this blueprint:
           └──────┬───────┘    └──────┬──────┘└──────┬──────┘  └──────┬───────┘
                  │                   │              │                │
          ┌───────▼──────┐   ┌───────▼──────┐ ┌──────▼──────┐  ┌──────▼──────┐
-         │ PostgreSQL   │   │  Pinecone    │ │ PostgreSQL  │  │  DynamoDB   │
+         │ PostgreSQL   │   │   Chroma     │ │ PostgreSQL  │  │ PostgreSQL  │
          │ (clusters)   │   │  (vectors)   │ │ (live data) │  │ (histories) │
          └──────────────┘   └──────────────┘ └─────────────┘  └─────────────┘
 
-  Cross-cutting: LangSmith tracing · RAGAS eval · DynamoDB memory · Redis cache
-  · Amazon Bedrock (Sonnet/Haiku/Llama fallback) · CloudWatch · Self-healing loop
+  Cross-cutting: LangSmith tracing · RAGAS eval · PostgreSQL memory · Redis cache
+  · Groq (Sonnet/Haiku/fallback tier) · CloudWatch · Self-healing loop
 ```
+
+*(Updated 2026-09-03 to match the Open-Source/Zero-Cost Pivot above: Pinecone
+→ Chroma, DynamoDB → PostgreSQL, Amazon Bedrock → Groq. The original,
+as-planned version of this diagram is preserved nowhere else — this is the
+single source of truth for the target architecture, kept current rather than
+duplicated.)*
 
 **Why agents are built bottom-up, Supervisor last:** the Supervisor's job is to call already-correct agents. If you build the Supervisor first, every orchestration bug is entangled with an agent-correctness bug, and you can't tell which one you're debugging. Build and eval each agent standalone → wire Supervisor on top.
 
@@ -163,7 +178,7 @@ audience-match/
 │   │       ├── briefing_chain.py
 │   │       └── schemas.py
 │   ├── memory/
-│   │   ├── dynamo_history.py
+│   │   ├── chat_history_store.py    # PostgreSQL-backed, folded in from the original DynamoDB plan
 │   │   ├── summarizer.py
 │   │   └── session_keys.py
 │   ├── guardrails/
@@ -179,8 +194,14 @@ audience-match/
 │   │   ├── langsmith_setup.py
 │   │   └── cost_tracker.py
 │   ├── llm/
-│   │   ├── bedrock_clients.py       # sonnet, haiku, fallback chain
+│   │   ├── llm_clients.py           # sonnet, haiku, fallback chain (ChatGroq, not ChatBedrock — see pivot amendment)
 │   │   └── model_router.py
+│   ├── db/
+│   │   └── postgres.py              # engine/session + app_readonly role usage (Phase 0.04)
+│   ├── vectorstore/
+│   │   └── chroma_client.py         # local/embedded Chroma client (Phase 0.04)
+│   ├── storage/
+│   │   └── local_files.py           # data/raw_documents/, data/raw_customer_data/ — was S3 (Phase 0.04)
 │   └── config.py
 ├── eval/
 │   ├── golden_datasets/
@@ -200,7 +221,9 @@ audience-match/
 │   ├── terraform/  (or CDK — see Phase 13)
 │   └── github_actions/deploy.yml
 ├── scripts/
-│   ├── seed_pinecone.py
+│   ├── apply_schema.py              # applies infra/db/schema.sql, idempotent (Phase 0.04)
+│   ├── verify_langsmith_trace.py    # manual observability check (Phase 0.03)
+│   ├── seed_chroma.py               # was seed_pinecone.py — see pivot amendment
 │   ├── schema_extraction_job.py
 │   └── nightly_eval_job.py
 ├── requirements.txt
@@ -246,7 +269,7 @@ Every agent imports from here — never instantiates a `ChatGroq` directly. This
 - `/health` endpoint
 - Empty `/chat` endpoint that echoes input — proves the deployment pipeline end-to-end before any AI logic exists
 
-**Definition of Done (Phase 0):** `docker build` succeeds, container runs locally, `/health` returns 200, a manual LangSmith trace appears for a test LLM call, Chroma/PostgreSQL are reachable from the container.
+**Definition of Done (Phase 0):** `docker build` succeeds, container runs locally, `/health` returns 200, a manual LangSmith trace appears for a test LLM call, Chroma/PostgreSQL are reachable from the container. **Closed 2026-09-03** — all met except the last clause, which was deliberately deferred to Phase 12/13 rather than built now (no agent code exists yet that needs it; full rationale in `.claude/specs/Phase00/master.md`'s Definition of Done section).
 
 ---
 
@@ -953,22 +976,43 @@ jobs:
 **Key decision — Continuous Delivery, not Continuous Deployment:** staging auto-deploys on every merge to `main`; production requires manual approval. This matters specifically because cluster re-analysis and campaign data carry business risk that warrants a human checkpoint.
 
 ### 16.2 Dockerfile (multi-stage, non-root)
+**Implemented in Phase 0 (feature `00-07`), not Phase 12** — Phase 0's own
+Definition of Done requires `docker build` to succeed locally, so this got
+built well ahead of this section. The snippet below is the real, verified
+`infra/docker/Dockerfile`, with four deviations from the original
+illustrative version worth knowing about: Python bumped 3.11→3.13 (matches
+the actual dev environment); `curl` added to the production stage (needed
+by `HEALTHCHECK`, absent from `python:3.13-slim` by default); CPU-only
+`torch` installed explicitly before `requirements.txt` (the default Linux
+wheel pulls in ~2GB+ of NVIDIA CUDA toolkit packages that are dead weight —
+Groq handles all LLM inference remotely, the only local model is the
+CPU-run `sentence-transformers` embedding model); and BuildKit cache mounts
+on both `pip install` steps (large downloads, needed resilience across
+repeated build attempts). Full verification record in
+`.claude/specs/Phase00/feature07-docker-and-dependencies.md`.
 ```dockerfile
-FROM python:3.11-slim AS builder
+# syntax=docker/dockerfile:1
+FROM python:3.13-slim AS builder
 WORKDIR /app
-RUN apt-get update && apt-get install -y gcc g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# CPU-only torch first -- the default Linux wheel pulls in the full NVIDIA
+# CUDA toolkit (2GB+) as dependencies, which is dead weight here.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install torch --index-url https://download.pytorch.org/whl/cpu
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
-FROM python:3.11-slim AS production
+FROM python:3.13-slim AS production
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/lib/python3.13 /usr/local/lib/python3.13
 COPY . .
 RUN useradd -m appuser
 USER appuser
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8000/health || exit 1
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 ```
 
 ### 16.3 Secrets
@@ -1137,7 +1181,7 @@ Consolidated checklist — nothing moves to "done" without its eval passing, not
 | Clustering instability across runs undermines trust | Medium | Medium | ARI stability check built into Phase 1, not optional |
 | Cost overrun from unoptimized model routing | Medium | Medium | Model routing table + budget alerts from Phase 9/10, not retrofitted |
 | Memory summarization silently drops critical context | Medium | High | Entity-preservation verification loop (Phase 6.4), tested with 50-case suite |
-| Bedrock rate limiting during traffic spikes | Medium | Medium | SQS queuing + fallback chain (Phase 0.2 + 13.4) built in from day one |
+| Groq rate limiting during traffic spikes (was: Bedrock, superseded by the pivot — fallback chain already built, Phase `00-02`/`00-06`; SQS queuing still deferred to Phase 13.4) | Medium | Medium | `robust_sonnet` fallback chain (`sonnet` → `haiku` → `fallback_model`) built in from day one; SQS queuing + free-tier throughput ceiling still to be assessed against real load in Phase 11/13 |
 | Self-healing auto-correction makes things worse | Low | High | Shadow test + canary + circuit breaker before any auto-correction ships (Phase 14.4) |
 
 ---
