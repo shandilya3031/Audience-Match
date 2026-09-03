@@ -1,7 +1,19 @@
 # Feature Spec — Phase 00.02: LLM Clients
 
 ## Status
-`Complete`
+`Complete` — **provider superseded, see note below.**
+
+**LLM provider superseded (2026-09-01):** this feature's Bedrock implementation
+was replaced by `06-llm-provider-pivot` — the project moved from AWS Bedrock to
+Groq (free-tier hosted API, open-weight models) to eliminate paid/approval-gated
+components now that this is a solo project (see the blueprint's "Architecture
+Amendment — Open-Source/Zero-Cost Pivot" section). `app/llm/bedrock_clients.py`
+no longer exists; it was renamed to `app/llm/llm_clients.py` and now instantiates
+`ChatGroq`. The architectural *pattern* this feature established (single choke
+point, `sonnet`/`haiku`/`robust_sonnet` exports, `ROUTING_TABLE` in
+`model_router.py`) is unchanged and still accurately described below — only the
+provider name/model IDs are stale. See `feature06-llm-provider-pivot.md` for the
+current state.
 
 ## Parent Phase
 Phase 00 — see `.claude/specs/Phase00/master.md`
@@ -15,6 +27,9 @@ populate by task name. This is the concrete implementation of CLAUDE.md §4 rule
 and blueprint §4.2: every future agent imports models from here rather than
 instantiating `ChatBedrock` itself, which is what makes a global model swap or
 fallback-policy change a one-file edit.
+
+*(Historical — describes the original Bedrock implementation. See the superseded
+note above.)*
 
 ## Depends On
 `00-01-environment-config` — reads model IDs and AWS region from `app.config.settings`

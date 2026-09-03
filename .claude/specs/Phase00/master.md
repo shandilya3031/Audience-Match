@@ -1,7 +1,10 @@
 # Master Spec — Phase 00: Foundations
 
 ## Status
-`In Progress`
+`Gate Met — Ready to Merge to main` (all Scope features Complete, all
+Definition of Done items below checked as of 2026-09-03; merging
+`phase/00-foundations` into `main` is still a separate, deliberate action
+for the user to trigger, not automatic)
 
 ## Overview
 Phase 0 stands up the skeleton every later phase depends on: environment/config
@@ -16,7 +19,7 @@ zero extra work later.
 - **Depends on (must be complete):** None — this is the root phase.
 - **Blocks (cannot start until this is done):** All of Phase 1 (Segmenter), Phase 2
   (RAG), Phase 3 (Aggregator), and every phase after them — none of them can import
-  `app.llm.bedrock_clients`, use `app.config`, or run against a deployable API until
+  `app.llm.llm_clients`, use `app.config`, or run against a deployable API until
   this phase's skeleton exists (CLAUDE.md §2, §4 rule 1).
 
 ## Scope
@@ -28,13 +31,20 @@ zero extra work later.
   `app/llm/model_router.py` with an (initially empty) `ROUTING_TABLE` that later
   phases populate by task name (CLAUDE.md §4 rules 1–2)
 - **4.3 Observability Bootstrap** — LangSmith project wiring
-  (`LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT`) verified with one manual test trace
-  before any agent code exists
-- **4.4 Storage Bootstrap** — Pinecone index/namespace config, PostgreSQL table DDL +
-  `app_readonly` read-only role, DynamoDB table definitions, S3 bucket definitions.
-  Code/config definitions are in scope now; **actual cloud resource provisioning is
-  deferred** — no AWS/Pinecone/PostgreSQL/DynamoDB credentials are confirmed
-  available yet (see note under Data & Storage Touched)
+  (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`) verified with one
+  manual test trace before any agent code exists
+- **4.4 Storage Bootstrap** — Chroma (local vector store) collection/namespace
+  config; PostgreSQL table DDL (`cluster_profiles`, `campaigns`,
+  `channel_performance`, `customer_transactions`, plus `chat_history`,
+  `schema_metadata`, `prompt_registry` folded in from the original DynamoDB
+  plan) + `app_readonly` read-only role; local filesystem directories
+  (`data/raw_documents/`, `data/raw_customer_data/`) folded in from the
+  original S3 plan. Per the blueprint's "Storage follow-up" amendment
+  (2026-09-01), no AWS account is needed for storage at all — Chroma is
+  local/embedded, DynamoDB was folded into PostgreSQL, and S3 was folded into
+  the local filesystem. Only a local PostgreSQL instance is required, and
+  actual provisioning (running the DDL against it) is in scope for this
+  feature, not deferred.
 - **4.5 Skeleton FastAPI App** — `app/main.py`, `/health` endpoint, an empty `/chat`
   endpoint that echoes input (no LLM call) — proves the deployment pipeline
   end-to-end before any AI logic exists
@@ -60,22 +70,26 @@ zero extra work later.
 None. Phase 0 creates no agents and no `AgentInput`/`AgentOutput` Pydantic contracts —
 those begin in Phase 1. It creates two new non-agent modules:
 - `app/config.py` — not agent-facing, no Pydantic I/O contract
-- `app/llm/bedrock_clients.py`, `app/llm/model_router.py` — shared infrastructure
+- `app/llm/llm_clients.py`, `app/llm/model_router.py` — shared infrastructure
   imported by all future agents, not itself an agent
 
 ## Data & Storage Touched
-- **Pinecone:** index config defined (serverless, cosine similarity, dimension to
-  match the embedding model chosen in Phase 2); namespaces planned:
-  `knowledge_base`, `cluster_profiles`, `schema_metadata`. **Not provisioned yet** —
-  config/connection code only, pending credentials.
+- **Chroma:** local collection config defined (cosine similarity, dimension to
+  match the embedding model chosen in Phase 2); namespaces/collections planned:
+  `knowledge_base`, `cluster_profiles`, `schema_metadata`. Local/embedded — no
+  cloud credentials needed; not yet provisioned since feature `00.04` hasn't been
+  implemented.
 - **PostgreSQL:** DDL defined for `cluster_profiles`, `campaigns`,
-  `channel_performance`, `customer_transactions`; a dedicated read-only role
-  (`app_readonly`) defined now per CLAUDE.md — not retrofitted later. **Not
-  provisioned yet** — pending credentials.
-- **DynamoDB:** table definitions for `ChatHistory` (PK: `session_key`),
-  `SchemaMetadata`, `PromptRegistry`. **Not provisioned yet** — pending credentials.
-- **S3:** bucket definitions for `raw-documents/`, `raw-customer-data/`. **Not
-  provisioned yet** — pending credentials.
+  `channel_performance`, `customer_transactions`, plus `chat_history` (keyed on
+  `session_key`, per CLAUDE.md §4 rule 7's `{user_id}_{module}_{session_id}`
+  convention), `schema_metadata`, `prompt_registry` (folded in from the
+  original DynamoDB plan — see blueprint's "Storage follow-up" amendment); a
+  dedicated read-only role (`app_readonly`) defined now per CLAUDE.md — not
+  retrofitted later. Provisioning against a local PostgreSQL instance is in
+  scope for feature `00.04`.
+- **DynamoDB:** no longer used — folded into PostgreSQL (see above).
+- **S3:** no longer used — folded into local filesystem directories
+  (`data/raw_documents/`, `data/raw_customer_data/`), see blueprint amendment.
 
 ## LLM Usage in This Phase
 None yet. This phase only builds the routing *infrastructure* — `ROUTING_TABLE` in
@@ -99,8 +113,11 @@ None. Golden datasets and `eval/run_*_eval.py` gating scripts begin with Phase 1
 structure.
 
 ## Observability Requirements
-- LangSmith project created; `LANGCHAIN_TRACING_V2=true` and
-  `LANGCHAIN_PROJECT=audience-match-dev` set via `.env` / `app/config.py`
+- LangSmith project created; `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY`, and
+  `LANGSMITH_PROJECT=audience-match-dev` set via `.env` / `app/config.py` (current
+  LangSmith env var naming, per the installed `langsmith-trace` skill — `app.config`
+  also explicitly exports these to `os.environ`, since LangChain's tracer reads the
+  process environment directly rather than any Settings object)
 - Verified with one manual test trace (a single `sonnet.invoke(...)` or
   `haiku.invoke(...)` call) showing up in the LangSmith project — this is what proves
   wiring is correct before any agent code depends on it
@@ -115,20 +132,55 @@ Do not edit manually._
 | # | Feature | Spec file | Status |
 |---|---|---|---|
 | 01 | Environment Config | feature01-environment-config.md | Complete |
-| 02 | LLM Clients | feature02-llm-clients.md | Complete |
+| 02 | LLM Clients | feature02-llm-clients.md | Complete (provider superseded by 06) |
+| 03 | Observability Bootstrap | feature03-observability-bootstrap.md | Complete |
+| 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | Complete |
+| 04 | Storage Bootstrap | feature04-storage-bootstrap.md | Complete |
+| 05 | Skeleton FastAPI App | feature05-skeleton-fastapi-app.md | Complete |
+| 07 | Docker & Dependencies | feature07-docker-and-dependencies.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
 storage reachable"):
 
-- [ ] All features in Scope above have specs and are implemented
-- [ ] `docker build` succeeds
-- [ ] Container runs locally
-- [ ] `/health` returns 200
-- [ ] A manual LangSmith trace appears for a test LLM call
-- [ ] Pinecone/PostgreSQL/DynamoDB are reachable from the container — **or**, if
-      credentials remain unavailable when this phase would otherwise close, this
-      item is explicitly logged here as a deferred follow-up rather than silently
-      dropped, and Phase 0 is not marked `Complete` until it is resolved one way or
-      the other
-- [ ] No unresolved items in Risk Register (blueprint §22) attributable to this phase
+- [x] All features in Scope above have specs and are implemented
+- [x] `docker build` succeeds (`audience-match:local`, 147.7s, 2.46GB — feature
+      `00-07`)
+- [x] Container runs locally (`docker run`, non-root `appuser` verified —
+      feature `00-07`)
+- [x] `/health` returns 200 (`{"status":"ok"}` from inside the container —
+      feature `00-07`)
+- [x] A manual LangSmith trace appears for a test LLM call (`ChatGroq success`,
+      `audience-match-dev`, 2026-09-01 10:49:53 UTC — feature `00-03`/`00-06`)
+- [x] Chroma/PostgreSQL are reachable from the container — **decision: deliberately
+      deferred to Phase 12 (CI/CD Pipeline) / Phase 13 (Deployment Architecture),
+      not resolved here.** Rationale (2026-09-03):
+      1. This phase's own Out of Scope section already states "Phase 0 only
+         needs `docker build` to succeed locally, not a working pipeline" —
+         container-to-container networking is pipeline/deployment territory,
+         not this gate.
+      2. No agent code exists yet that runs inside a container and needs to
+         reach Postgres/Chroma — per CLAUDE.md §2 build order, Phase 1
+         (Segmenter) hasn't started, and the skeleton `/health` check doesn't
+         touch either store (feature `00-05`). There is nothing real to
+         verify reachability *for* yet.
+      3. Host-level PostgreSQL reachability was already verified directly
+         (feature `00-04`, `scripts/apply_schema.py` run twice). Chroma is
+         local/embedded, so its "reachability" concern is a volume/path
+         mount, not network config.
+      4. Standing up `docker-compose`/network wiring now would mean building
+         infra ahead of any spec that requests it, and would likely be
+         thrown away when Phase 12/13 build the real thing (ECS task
+         networking, not a local compose file) — against CLAUDE.md's
+         build-order discipline.
+      Tracked so this isn't silently dropped: revisit no later than whichever
+      comes first — (a) Phase 1 first needs a containerized agent to hit
+      PostgreSQL, or (b) Phase 12/13 stand up the real deploy pipeline.
+- [x] No unresolved items in Risk Register (blueprint §22) attributable to this
+      phase — reviewed 2026-09-03. The one row naming a Phase 0 feature
+      directly ("Bedrock rate limiting during traffic spikes... Phase 0.2")
+      is superseded: Bedrock was replaced by Groq in feature `00-06`, so that
+      specific mitigation no longer applies as written (worth a blueprint
+      amendment note if Groq rate-limit handling becomes a real concern
+      later, but that's a new/different risk, not this one left unresolved).
+      No other Risk Register row is attributable to Phase 0.

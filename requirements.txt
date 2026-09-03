@@ -1,6 +1,13 @@
 pydantic-settings
 python-dotenv
 langchain-core
-langchain-aws
-boto3
+langchain-groq
+langsmith
+psycopg2-binary
+langchain-chroma
+chromadb
+langchain-huggingface
+sentence-transformers
+fastapi
+uvicorn[standard]
 pytest
