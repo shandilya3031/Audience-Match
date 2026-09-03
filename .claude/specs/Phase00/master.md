@@ -134,20 +134,27 @@ Do not edit manually._
 | 06 | LLM Provider Pivot | feature06-llm-provider-pivot.md | Complete |
 | 04 | Storage Bootstrap | feature04-storage-bootstrap.md | Complete |
 | 05 | Skeleton FastAPI App | feature05-skeleton-fastapi-app.md | Complete |
+| 07 | Docker & Dependencies | feature07-docker-and-dependencies.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §4 / §21 ("0 — Foundations: Deploy pipeline works end-to-end, all
 storage reachable"):
 
-- [ ] All features in Scope above have specs and are implemented
-- [ ] `docker build` succeeds
-- [ ] Container runs locally
-- [ ] `/health` returns 200
+- [x] All features in Scope above have specs and are implemented
+- [x] `docker build` succeeds (`audience-match:local`, 147.7s, 2.46GB — feature
+      `00-07`)
+- [x] Container runs locally (`docker run`, non-root `appuser` verified —
+      feature `00-07`)
+- [x] `/health` returns 200 (`{"status":"ok"}` from inside the container —
+      feature `00-07`)
 - [x] A manual LangSmith trace appears for a test LLM call (`ChatGroq success`,
       `audience-match-dev`, 2026-09-01 10:49:53 UTC — feature `00-03`/`00-06`)
-- [ ] Chroma/PostgreSQL are reachable from the container — both are local/no-AWS-
-      account-needed per the storage follow-up amendment (DynamoDB folded into
-      PostgreSQL, S3 folded into local filesystem); if a local PostgreSQL instance
-      isn't available when this phase would otherwise close, this item is
-      explicitly logged here as a deferred follow-up rather than silently dropped
+- [ ] Chroma/PostgreSQL are reachable from the container — still open. Both are
+      local/no-AWS-account-needed per the storage follow-up amendment
+      (DynamoDB folded into PostgreSQL, S3 folded into local filesystem), and
+      a local PostgreSQL instance now exists (`audience-match-postgres`,
+      feature `00-04`), but wiring container-to-container reachability
+      (Docker networking/compose) was explicit Out of Scope for `00-07` — the
+      skeleton `/health` check doesn't exercise it either (feature `00-05`).
+      Logged here as a deferred follow-up, not silently dropped.
 - [ ] No unresolved items in Risk Register (blueprint §22) attributable to this phase
