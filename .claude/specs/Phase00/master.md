@@ -1,7 +1,10 @@
 # Master Spec — Phase 00: Foundations
 
 ## Status
-`In Progress`
+`Gate Met — Ready to Merge to main` (all Scope features Complete, all
+Definition of Done items below checked as of 2026-09-03; merging
+`phase/00-foundations` into `main` is still a separate, deliberate action
+for the user to trigger, not automatic)
 
 ## Overview
 Phase 0 stands up the skeleton every later phase depends on: environment/config
@@ -149,12 +152,35 @@ storage reachable"):
       feature `00-07`)
 - [x] A manual LangSmith trace appears for a test LLM call (`ChatGroq success`,
       `audience-match-dev`, 2026-09-01 10:49:53 UTC — feature `00-03`/`00-06`)
-- [ ] Chroma/PostgreSQL are reachable from the container — still open. Both are
-      local/no-AWS-account-needed per the storage follow-up amendment
-      (DynamoDB folded into PostgreSQL, S3 folded into local filesystem), and
-      a local PostgreSQL instance now exists (`audience-match-postgres`,
-      feature `00-04`), but wiring container-to-container reachability
-      (Docker networking/compose) was explicit Out of Scope for `00-07` — the
-      skeleton `/health` check doesn't exercise it either (feature `00-05`).
-      Logged here as a deferred follow-up, not silently dropped.
-- [ ] No unresolved items in Risk Register (blueprint §22) attributable to this phase
+- [x] Chroma/PostgreSQL are reachable from the container — **decision: deliberately
+      deferred to Phase 12 (CI/CD Pipeline) / Phase 13 (Deployment Architecture),
+      not resolved here.** Rationale (2026-09-03):
+      1. This phase's own Out of Scope section already states "Phase 0 only
+         needs `docker build` to succeed locally, not a working pipeline" —
+         container-to-container networking is pipeline/deployment territory,
+         not this gate.
+      2. No agent code exists yet that runs inside a container and needs to
+         reach Postgres/Chroma — per CLAUDE.md §2 build order, Phase 1
+         (Segmenter) hasn't started, and the skeleton `/health` check doesn't
+         touch either store (feature `00-05`). There is nothing real to
+         verify reachability *for* yet.
+      3. Host-level PostgreSQL reachability was already verified directly
+         (feature `00-04`, `scripts/apply_schema.py` run twice). Chroma is
+         local/embedded, so its "reachability" concern is a volume/path
+         mount, not network config.
+      4. Standing up `docker-compose`/network wiring now would mean building
+         infra ahead of any spec that requests it, and would likely be
+         thrown away when Phase 12/13 build the real thing (ECS task
+         networking, not a local compose file) — against CLAUDE.md's
+         build-order discipline.
+      Tracked so this isn't silently dropped: revisit no later than whichever
+      comes first — (a) Phase 1 first needs a containerized agent to hit
+      PostgreSQL, or (b) Phase 12/13 stand up the real deploy pipeline.
+- [x] No unresolved items in Risk Register (blueprint §22) attributable to this
+      phase — reviewed 2026-09-03. The one row naming a Phase 0 feature
+      directly ("Bedrock rate limiting during traffic spikes... Phase 0.2")
+      is superseded: Bedrock was replaced by Groq in feature `00-06`, so that
+      specific mitigation no longer applies as written (worth a blueprint
+      amendment note if Groq rate-limit handling becomes a real concern
+      later, but that's a new/different risk, not this one left unresolved).
+      No other Risk Register row is attributable to Phase 0.
