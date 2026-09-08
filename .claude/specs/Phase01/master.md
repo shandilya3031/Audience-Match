@@ -43,11 +43,18 @@ phases get real cluster data to test against instead of mocks.
   justify dimensionality reduction, so clustering operates on real,
   directly-interpretable features throughout)
 - **Clustering pipeline** (`app/agents/segmenter/clustering.py`) —
-  multi-algorithm candidate run (KMeans, Agglomerative/ward, DBSCAN,
-  HDBSCAN), best-model selection by silhouette + Davies-Bouldin (tie-break
-  on stability), minimum 4 unique clusters to qualify, 5-reseed stability
-  check via Adjusted Rand Index with a documented warning path when
-  ARI < 0.75 (blueprint §5.2)
+  candidate run over KMeans and Agglomerative/ward only (DBSCAN/HDBSCAN
+  dropped per the clustering-pipeline spec's 2026-09-08 amendment — on
+  real test data their silhouette/Davies-Bouldin scores were computed
+  only on non-noise points while KMeans/Agglomerative must classify every
+  row, letting a density method "win" by discarding up to ~73% of rows as
+  noise; KMeans/Agglomerative structurally guarantee full-coverage
+  segmentation instead), best-model selection by silhouette + Davies-
+  Bouldin (tie-break on stability), minimum 3 unique clusters to qualify
+  (lowered from the blueprint's original 4 per its 2026-09-08 amendment —
+  an algorithm/hyperparameter candidate producing fewer than 3 clusters is
+  discarded before any scoring), 5-reseed stability check via Adjusted
+  Rand Index with a documented warning path when ARI < 0.75 (blueprint §5.2)
 - **LLM naming chain** (`app/agents/segmenter/naming_chain.py`) —
   structured-output `ClusterSummary` (cluster_id, cluster_name,
   segment_size_pct, exactly 5 summary_points, dominant_age_group,
@@ -155,8 +162,9 @@ From CLAUDE.md §6 checklist, applicable to this phase:
   - Segmenter cluster stability (ARI across reseeded runs) **≥ 0.75**
   - Ground-truth ARI on golden dataset (no CLAUDE.md §7 numeric floor
     given beyond stability; blueprint §5's Definition of Done requires
-    "reliably produces ≥4 stable clusters" — treat ≥4 valid clusters per
-    golden case as a pass/fail gate alongside the ARI stability number)
+    "reliably produces ≥3 stable clusters" per the blueprint's 2026-09-08
+    amendment — treat ≥3 valid clusters per golden case as a pass/fail
+    gate alongside the ARI stability number)
   - Naming quality: zero fabricated statistics in 100% manual review of
     golden-dataset naming outputs (blueprint §5 DoD)
 
@@ -175,13 +183,14 @@ Do not edit manually._
 | # | Feature | Spec file | Status |
 |---|---|---|---|
 | 01 | Preprocessing Pipeline | feature01-preprocessing-pipeline.md | Complete |
+| 02 | Clustering Pipeline | feature02-clustering-pipeline.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §5 / §21 ("1 — Segmenter: ARI stability ≥0.75, zero
 fabricated stats in naming review"):
 
 - [ ] All features in Scope above have specs and are implemented
-- [ ] Given a test CSV, pipeline reliably produces ≥4 stable clusters
+- [ ] Given a test CSV, pipeline reliably produces ≥3 stable clusters
 - [ ] Clustering stability ARI ≥ 0.75 across 5 reseeded runs
 - [ ] Names are grounded in real aggregate values — zero fabricated numbers
       in 100% manual review of golden dataset naming outputs
