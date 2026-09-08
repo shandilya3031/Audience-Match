@@ -301,16 +301,38 @@ Output: preprocessed feature matrix + feature name mapping (for interpretability
 **Implementation note:** keep a `feature_lineage.json` recording the final feature matrix's column names (numeric columns as-is, one-hot-encoded categorical columns) plus any columns dropped for missingness/correlation — needed later so the LLM naming step can reference real customer attributes directly, since no PCA step exists to abstract them into components.
 
 ### 5.2 Clustering Pipeline (`clustering.py`)
+
+**Amendment (2026-09-08):** the minimum-viable-cluster-count floor below
+was lowered from 4 to 3 — an algorithm/hyperparameter candidate producing
+only 1 or 2 clusters is discarded before scoring, but 3 is an acceptable
+segmentation for smaller or less-separable client datasets. This is a
+discard floor applied per-candidate, before any silhouette/Davies-Bouldin
+comparison — not a claim that 3 segments is the target for every client.
+
+**Amendment (2026-09-08):** `dbscan`/`hdbscan` have been dropped from the
+`candidates` dict below — real testing (the Kaggle "Sample Superstore"
+dataset, 7,143 rows/84 columns after preprocessing) found their
+silhouette/Davies-Bouldin scores are computed only on non-noise points,
+while `kmeans`/`hierarchical` must classify every row. This let a density
+method "win" the comparison purely by discarding hard-to-cluster rows as
+noise: HDBSCAN won at silhouette=0.2482 while labeling 72.9% of rows
+(5,207/7,143) as noise; DBSCAN scored lower (0.1885, since it was judged
+against a harder, larger subset) and still discarded 41.2% (2,945/7,143).
+Neither meets the actual segmentation objective — every customer should
+land in an actionable cluster — and keeping DBSCAN alone doesn't fix the
+bias, it only shrinks it. `kmeans`/`hierarchical` structurally guarantee
+100% row coverage instead. Revisit only if a future use case genuinely
+needs explicit outlier/noise detection as a first-class feature, scoped
+deliberately rather than folded back into this candidate-selection loop.
+
 ```python
 candidates = {
     "kmeans": KMeans(n_clusters=k),
     "hierarchical": AgglomerativeClustering(n_clusters=k, linkage="ward"),
-    "dbscan": DBSCAN(eps=eps, min_samples=min_samples),
-    "hdbscan": HDBSCAN(min_cluster_size=min_size),
 }
 for name, model in candidates.items():
     labels = model.fit_predict(X)
-    if n_unique_clusters(labels) >= 4:
+    if n_unique_clusters(labels) >= 3:
         score = {
             "silhouette": silhouette_score(X, labels),
             "davies_bouldin": davies_bouldin_score(X, labels),
@@ -360,7 +382,7 @@ class SegmenterAgentOutput(BaseModel):
 - Metric: Adjusted Rand Index against ground truth, plus the stability ARI check above
 - Naming quality eval: human review checklist — does the LLM-generated name/summary reference correct, non-hallucinated statistics? (spot-check 100% at this stage since volume is low)
 
-**Definition of Done (Phase 1):** Given a test CSV, pipeline reliably produces ≥4 stable clusters, names are grounded in real aggregate values (zero fabricated numbers in manual review), data lands correctly in both PostgreSQL and Pinecone.
+**Definition of Done (Phase 1):** Given a test CSV, pipeline reliably produces ≥3 stable clusters, names are grounded in real aggregate values (zero fabricated numbers in manual review), data lands correctly in both PostgreSQL and Pinecone.
 
 ---
 
