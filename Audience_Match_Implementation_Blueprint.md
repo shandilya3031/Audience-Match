@@ -277,6 +277,16 @@ Every agent imports from here — never instantiates a `ChatGroq` directly. This
 
 **Build order rationale:** Segmenter has no dependency on other agents and produces the cluster data that both the RAG agent and Campaign Briefing agent will later consume — build it first so downstream agents have real data to test against instead of mocks.
 
+**Amendment (2026-09-04):** the PCA dimensionality-reduction step originally
+in §5.1 below has been dropped. This project's customer CSVs are not
+expected to have enough columns for dimensionality reduction to earn its
+complexity — after one-hot encoding, a handful of numeric + categorical
+columns don't need PCA compression, and skipping it means clustering
+operates on real, directly-interpretable features throughout instead of
+abstract components. If a future dataset turns out to have high enough
+dimensionality that PCA becomes worthwhile again, re-introduce it as a
+new, explicitly-scoped feature rather than reviving this section as-is.
+
 ### 5.1 Preprocessing Pipeline (`preprocessing.py`)
 ```
 Input: raw CSV → pandas DataFrame
@@ -286,10 +296,9 @@ Input: raw CSV → pandas DataFrame
   → StandardScaler on numeric features
   → OneHotEncoder on categorical features
   → correlation matrix → drop features with |corr| > 0.9
-  → PCA → retain components explaining 85% cumulative variance
 Output: preprocessed feature matrix + feature name mapping (for interpretability)
 ```
-**Implementation note:** keep a `feature_lineage.json` mapping PCA components back to original column names — needed later so the LLM naming step can reference real customer attributes, not just "Component 1, Component 2."
+**Implementation note:** keep a `feature_lineage.json` recording the final feature matrix's column names (numeric columns as-is, one-hot-encoded categorical columns) plus any columns dropped for missingness/correlation — needed later so the LLM naming step can reference real customer attributes directly, since no PCA step exists to abstract them into components.
 
 ### 5.2 Clustering Pipeline (`clustering.py`)
 ```python
@@ -326,7 +335,7 @@ class ClusterSummary(BaseModel):
 
 naming_llm = sonnet.with_structured_output(ClusterSummary)
 ```
-Prompt includes: aggregate statistics per cluster (real numbers, not vague descriptions) + `feature_lineage.json` so the LLM can say "high spend, urban, online-first" instead of "Component 2 is elevated."
+Prompt includes: aggregate statistics per cluster (real numbers, not vague descriptions) + `feature_lineage.json` so the LLM can say "high spend, urban, online-first" grounded in real column names rather than inventing vague descriptions.
 
 ### 5.4 Dual Persistence
 ```

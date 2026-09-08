@@ -1,6 +1,10 @@
 import pytest
 
-from app.storage.local_files import raw_customer_data_path, raw_documents_path
+from app.storage.local_files import (
+    raw_customer_data_path,
+    raw_documents_path,
+    segmenter_artifact_path,
+)
 from app.vectorstore.chroma_client import (
     CLUSTER_PROFILES,
     KNOWLEDGE_BASE,
@@ -36,3 +40,13 @@ def test_raw_customer_data_path_creates_directory(tmp_path, monkeypatch):
     path = raw_customer_data_path("customers.csv")
     assert path.parent.is_dir()
     assert path.name == "customers.csv"
+
+
+def test_segmenter_artifact_path_creates_directory(tmp_path, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "segmenter_artifacts_dir", str(tmp_path / "segmenter"))
+    path = segmenter_artifact_path("client_42", "feature_lineage.json")
+    assert path.parent.is_dir()
+    assert path.parent.name == "client_42"
+    assert path.name == "feature_lineage.json"

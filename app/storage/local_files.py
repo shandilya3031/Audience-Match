@@ -13,3 +13,9 @@ def raw_customer_data_path(filename: str) -> Path:
     directory = Path(settings.raw_customer_data_dir)
     directory.mkdir(parents=True, exist_ok=True)
     return directory / filename
+
+
+def segmenter_artifact_path(client_id: str, filename: str) -> Path:
+    directory = Path(settings.segmenter_artifacts_dir) / client_id
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / filename

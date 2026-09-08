@@ -1,7 +1,7 @@
 # Master Spec — Phase 1: Segmenter Agent
 
 ## Status
-`Not Started`
+`In Progress`
 
 ## Overview
 Phase 1 builds the Segmenter Agent: a standalone pipeline that clusters
@@ -36,9 +36,12 @@ phases get real cluster data to test against instead of mocks.
 - **Preprocessing pipeline** (`app/agents/segmenter/preprocessing.py`) —
   raw CSV → pandas DataFrame → numeric/categorical split → drop >85%
   missing columns → IQR outlier removal → `StandardScaler` /
-  `OneHotEncoder` → correlation-based feature drop (|corr| > 0.9) → PCA
-  retaining 85% cumulative variance → `feature_lineage.json` mapping PCA
-  components back to original column names (blueprint §5.1)
+  `OneHotEncoder` → correlation-based feature drop (|corr| > 0.9) →
+  `feature_lineage.json` recording final feature-matrix column names
+  and any dropped columns (blueprint §5.1; PCA step dropped per
+  blueprint's 2026-09-04 amendment — expected column counts don't
+  justify dimensionality reduction, so clustering operates on real,
+  directly-interpretable features throughout)
 - **Clustering pipeline** (`app/agents/segmenter/clustering.py`) —
   multi-algorithm candidate run (KMeans, Agglomerative/ward, DBSCAN,
   HDBSCAN), best-model selection by silhouette + Davies-Bouldin (tie-break
@@ -171,7 +174,7 @@ Do not edit manually._
 
 | # | Feature | Spec file | Status |
 |---|---|---|---|
-| _(none yet)_ | | | |
+| 01 | Preprocessing Pipeline | feature01-preprocessing-pipeline.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §5 / §21 ("1 — Segmenter: ARI stability ≥0.75, zero

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # follow-up" amendment)
     raw_documents_dir: str = "./data/raw_documents"
     raw_customer_data_dir: str = "./data/raw_customer_data"
+    segmenter_artifacts_dir: str = "./data/segmenter_artifacts"
 
     # LangSmith
     langsmith_tracing: bool = True
