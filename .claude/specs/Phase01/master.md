@@ -1,7 +1,7 @@
 # Master Spec — Phase 1: Segmenter Agent
 
 ## Status
-`Not Started`
+`In Progress`
 
 ## Overview
 Phase 1 builds the Segmenter Agent: a standalone pipeline that clusters
@@ -174,7 +174,7 @@ Do not edit manually._
 
 | # | Feature | Spec file | Status |
 |---|---|---|---|
-| 01 | Preprocessing Pipeline | feature01-preprocessing-pipeline.md | Not Started |
+| 01 | Preprocessing Pipeline | feature01-preprocessing-pipeline.md | Complete |
 
 ## Definition of Done (Phase Gate)
 Per blueprint §5 / §21 ("1 — Segmenter: ARI stability ≥0.75, zero

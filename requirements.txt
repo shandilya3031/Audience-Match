@@ -10,4 +10,7 @@ langchain-huggingface
 sentence-transformers
 fastapi
 uvicorn[standard]
+pandas
+scikit-learn
+numpy
 pytest
